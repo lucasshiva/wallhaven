@@ -1,0 +1,31 @@
+[tool.poetry]
+name = "wallhaven"
+version = "0.1.0"
+description = "A Python library and CLI for interacting with the Wallhaven API."
+authors = ["Lucas Cavalcante da Silva <silva.lucasdev@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/lucasshiva/wallhaven"
+repository = "https://github.com/lucasshiva/wallhaven"
+keywords = ["wallhaven", "wallpaper", "python", "api", "cli", "click"]
+include = [
+    "LICENSE",
+]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+requests = "^2.25.1"
+click = "^7.1.2"
+
+[tool.poetry.dev-dependencies]
+black = "^21.5b0"
+flake8 = "^3.9.2"
+mypy = "^0.812"
+isort = "^5.8.0"
+
+[tool.black]
+line-length = 88
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
