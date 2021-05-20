@@ -14,14 +14,14 @@ include = [
 
 [tool.poetry.dependencies]
 python = "^3.7"
-requests = "^2.25.1"
-click = "^7.1.2"
+requests = "*"
+click = "*"
 
 [tool.poetry.dev-dependencies]
-black = "^21.5b0"
-flake8 = "^3.9.2"
-mypy = "^0.812"
-isort = "^5.8.0"
+black = "*"
+flake8 = "*"
+mypy = "*"
+isort = "*"
 
 [tool.black]
 line-length = 88
