@@ -1,5 +1,5 @@
 """Provides Wallhaven to interact with the Wallhaven API."""
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from wallhaven.api import API_ENDPOINTS
 from wallhaven.session import RequestHandler
@@ -38,4 +38,10 @@ class Wallhaven:
         """Get wallpaper from ID. An API key is required for NSFW wallpapers."""
         url = API_ENDPOINTS["wallpaper"].format(id=wallpaper_id)
         response = self.handler.get(url, headers=self.headers).json()
+        return response.get("data")
+
+    def get_tag(self, tag_id: Union[str, int]) -> Dict[str, Any]:
+        """Get tag from ID."""
+        url = API_ENDPOINTS["tag"].format(id=tag_id)
+        response = self.handler.get(url).json()
         return response.get("data")
