@@ -1,5 +1,6 @@
 """Provides RequestHandler to handle synchronous GET requests."""
 
+from typing import Dict, Any
 import requests
 
 
@@ -59,3 +60,20 @@ class RequestHandler:
         response = self.session.get(url, **kwargs)
         response.encoding = "utf-8"
         return response
+
+    def get_json(self, url: str, **kwargs) -> Dict[str, Any]:
+        """Send a GET request and parse it as a JSON.
+
+        Args:
+            url (str): The endpoint to request.
+            **kwargs: Optional keyword arguments that `requests.get` takes.
+
+        Returns:
+            The json-encoded content of the `Response` object.
+
+        Raises:
+            `requests.exceptions.HTTPError`: For any HTTP errors that ocurred.
+            ValueError: If the response body does not contain valid json.
+        """
+        response = self.get(url, **kwargs)
+        return response.json()
