@@ -1,7 +1,10 @@
 """Provides RequestHandler to handle synchronous GET requests."""
 
-from typing import Dict, Any
+from typing import Any, Dict
+
 import requests
+
+from wallhaven.exceptions import ApiKeyError
 
 
 class RequestHandler:
@@ -20,7 +23,16 @@ class RequestHandler:
     @staticmethod
     def _check_for_errors(response: requests.Response, *args, **kwargs) -> None:
         """Check for HTTP errors in a `Response` object."""
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except requests.exceptions.HTTPError:
+            if response.status_code == 401:
+                raise ApiKeyError(
+                    "The API key is invalid. Please check if everything is correct or "
+                    + "regenerate your API key."
+                )
+            else:
+                raise
 
     @property
     def session(self) -> requests.Session:
@@ -62,7 +74,7 @@ class RequestHandler:
         return response
 
     def get_json(self, url: str, **kwargs) -> Dict[str, Any]:
-        """Send a GET request and parse it as a JSON.
+        """Send a GET request and parse it as json.
 
         Args:
             url (str): The endpoint to request.
