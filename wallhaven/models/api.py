@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 from typing_extensions import Literal
+
+from wallhaven.session import handler
 
 
 class WallhavenModel:
@@ -85,22 +88,23 @@ class Wallpaper(WallhavenModel):
     path: str = field(repr=False)
     thumbs: Dict[str, str] = field(repr=False)
 
-    # Search results don't include tags in wallpapers.
+    # No tags/uploader when searching or listing a collection.
     tags: List[Tag] = field(default_factory=list)
-
-    # Collections don't include the uploader in wallpapers.
     uploader: Optional[Uploader] = field(default=None)
 
     @property
     def width(self) -> int:
+        """A helper method to make it easier to access the wallpaper's width."""
         return self.dimension_x
 
     @property
     def height(self) -> int:
+        """A helper method to make it easier to access the wallpaper's height."""
         return self.dimension_y
 
     @property
     def extension(self) -> str:
+        """Convert file MIME type to extension."""
         return ".jpg" if self.file_type == "image/jpeg" else ".png"
 
     @property
@@ -128,6 +132,9 @@ class Wallpaper(WallhavenModel):
         Args:
             data (dict): A dictionary containing the wallpaper's information. This
                 dictionary *MUST* contain information about tags and the uploader.
+
+        Returns:
+            Wallpaper: A new instance of a `Wallpaper` object.
         """
         # Save the original data.
         cls._data = data.copy()
@@ -146,12 +153,42 @@ class Wallpaper(WallhavenModel):
         Args:
             data (dict): A dictionary containing the wallpaper's information. This
                 dictionary must *NOT* contain information about tags or the uploader.
+
+        Returns:
+            Wallpaper: A new instance of a `Wallpaper` object.
         """
         # Save the original data.
         cls._data = data.copy()
 
         # Return an instance of Wallpaper with default tags and uploader.
         return cls(**data)
+
+    def save(self, path: Union[Path, str]) -> None:
+        """Download wallpaper and save it in `path`.
+
+        The directory will be automatically created if it doesn't exist and the file
+        format is `wallhaven-{id}{extension}`, e.g `wallhaven-8oxreo.png`.
+
+        Args:
+            path (Path | str): The directory where the wallpaper will be saved.
+
+        Raises:
+            TypeError: If `path` is not a `str` or a `Path` object.
+        """
+        if not isinstance(path, Path):
+            path = Path(path)
+
+        if not path.exists():
+            path.mkdir()
+
+        filename = f"wallhaven-{self.id}{self.extension}"
+        filepath = path.joinpath(filename)
+
+        response = handler.get(self.path, stream=True, timeout=20)
+        with open(filepath, "wb+") as img_file:
+            for chunk in response.iter_content(chunk_size=1024):
+                if chunk:
+                    img_file.write(chunk)
 
 
 @dataclass
