@@ -18,7 +18,7 @@ class Wallhaven:
     """
 
     def __init__(
-        self, api_key: Optional[str] = None, timeout: Optional[int] = None
+        self, api_key: Optional[str] = None, timeout: Optional[int] = 30
     ) -> None:
         """Initialize a Wallhaven instance.
 
@@ -27,7 +27,7 @@ class Wallhaven:
                 This key is provided via the user's account settings and can be
                 regenerated at anytime by the user. If no API key is given, `Wallhaven`
                 will try to load one from the `WALLHAVEN_API_KEY` environment variable.
-            timeout (str | None): The limit of time (in seconds) that `Wallhaven` will
+            timeout (int | None): The limit of time (in seconds) that `Wallhaven` will
                 wait for the server's response. The value of `None` means that
                 `Wallhaven` will wait forever.
         """
