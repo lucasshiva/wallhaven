@@ -151,12 +151,12 @@ class Wallhaven:
         response = handler.get_json(url, timeout=self.timeout, headers=self.headers)
         return UserSettings.from_dict(response["data"])
 
-    def get_user_collections(self, username: str) -> List[Collection]:
+    def get_collections(self, username: str) -> List[Collection]:
         """Get the collections of a given user.
 
         Fetching the collections by username only returns public collections.
         If you want to fetch all collections (including private ones), you need to
-        provide an API key and call `get_collections` instead.
+        provide an API key and call `get_all_collections` instead.
 
         Args:
             username (str): The collections' owner.
@@ -164,14 +164,14 @@ class Wallhaven:
         Returns:
             A list of `Collection` objects or an empty list if no collections are found.
             This will only happen if the user has only one collection and it's marked as
-            private. In this case, use `get_collections` with an API key.
+            private. In this case, use `get_all_collections` with an API key.
 
         """
         url = API_ENDPOINTS["collection"].format(username=username)
         response = handler.get_json(url, timeout=self.timeout)
         return self._get_collections_from_response(response)
 
-    def get_collections(self) -> List[Collection]:
+    def get_all_collections(self) -> List[Collection]:
         """Get all collections (including private ones) from an authenticated user.
 
         This operation requires an API key.
