@@ -147,7 +147,7 @@ class Wallpaper(WallhavenModel):
         return cls(tags=tags, uploader=uploader, **data)
 
     @classmethod
-    def from_collection_dict(cls, data: Dict[str, Any]) -> Wallpaper:
+    def from_listing_data(cls, data: Dict[str, Any]) -> Wallpaper:
         """Return an instance of Wallpaper from `data`.
 
         Args:
@@ -300,33 +300,41 @@ class Collection(WallhavenModel):
 
 
 @dataclass
-class CollectionListing(WallhavenModel):
-    """Represents the listing of wallpapers inside a collection.
+class BaseListing(WallhavenModel):
+    """Base listing class.
 
-    This model contains information about the wallpapers inside a collection, if you
-    need information about the collection itself, you need to use `Collection` instead.
+    This is a model that will be inherited from `CollectionListing` and `SearchResults`.
 
     Attributes:
-        data (list): A list of `Wallpaper` objects. Unfortunately, these objects come
-            without information about the `Tags` and the `Uploader`.
-        meta (Meta): An instance of the `Meta` model. It comes metadata about the
-            collection listing and can also be used for pagination.
+        data (list): A list of `Wallpaper` objects. These objects come without
+            information about the `Tags` and the `Uploader`.
+        meta (Meta): An instance of `Meta`. It contains metadata about the listing and
+            can also be used for pagination.
     """
 
     data: List[Wallpaper]
     meta: Meta
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> CollectionListing:
+    def from_dict(cls, data: Dict[str, Any]):
         """Return an instance of `cls` from `data`."""
-        # Save the original data
         cls._data = data.copy()
 
-        # Convert data to objects.
-        wallpapers = [Wallpaper.from_collection_dict(w) for w in data.pop("data")]
+        wallpapers = [Wallpaper.from_listing_data(w) for w in data.pop("data")]
         meta = Meta.from_dict(data.pop("meta"))
 
         return cls(data=wallpapers, meta=meta)
+
+
+@dataclass
+class CollectionListing(BaseListing):
+    """Represents the listing of wallpapers inside a collection.
+
+    This model contains information about the wallpapers inside a collection, if you
+    need information about the collection itself, you need to use `Collection` instead.
+    """
+
+    pass
 
 
 @dataclass(frozen=True)
@@ -368,3 +376,14 @@ class Meta(WallhavenModel):
     # Sorting by `random` will produce a seed that can be passed between pages to ensure
     # there are no repeats when getting a new page.
     seed: Optional[str] = None
+
+
+@dataclass
+class SearchResults(BaseListing):
+    """Represents the search results.
+
+    This model contains information about the wallpapers liste in a search result, as
+    well as meta information required for pagination.
+    """
+
+    pass

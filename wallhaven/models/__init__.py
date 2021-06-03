@@ -3,6 +3,7 @@
 from wallhaven.models.api import (
     Collection,
     CollectionListing,
+    SearchResults,
     Tag,
     Uploader,
     UserSettings,
