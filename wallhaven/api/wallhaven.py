@@ -1,10 +1,17 @@
 """Provides Wallhaven to interact with the Wallhaven API."""
 import os
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from wallhaven.api import API_ENDPOINTS
 from wallhaven.exceptions import ApiKeyError
-from wallhaven.models import Collection, CollectionListing, Tag, UserSettings, Wallpaper
+from wallhaven.models import (
+    Collection,
+    CollectionListing,
+    SearchResults,
+    Tag,
+    UserSettings,
+    Wallpaper,
+)
 from wallhaven.session import handler
 
 
@@ -32,6 +39,10 @@ class Wallhaven:
                 `Wallhaven` will wait forever.
         """
         self.api_key = api_key or os.getenv("WALLHAVEN_API_KEY")
+
+        # The parameters used when searching for wallpapers.
+        # For more information, see `https://wallhaven.cc/help/api#search`.
+        self.params: Dict[str, Any] = {}
 
         # The timeout cannot be passed to the global `handler`. Since it will be shared
         # by the CLI as well, we can't risk the API modifying a configuration the user
@@ -231,3 +242,30 @@ class Wallhaven:
             )
 
         return self._get_collection_listing(username, collection_id, private=True)
+
+    def search(self) -> SearchResults:
+        """Perform a search.
+
+        If you provide an API key with no extra parameters, search will be performed
+        with the user's browsing settings and default filters. With no additional
+        parameters, the search will display the latest SFW wallpapers. See the parameter
+        list at `https://wallhaven.cc/help/api` to access other listings.
+
+        If you provide both an API key and search parameters, `Wallhaven` will merge the
+        parameters defined in both, but with the search parameters having priority over
+        the ones in your browsing settings. For example, if you set `purity` to only
+        display `sketchy` wallpapers in your browsing settings, when providing an API
+        key, the search will always retrieve `sketchy` wallpapers unless you explicitly
+        state otherwise in the search parameters.
+
+        Also, the only way to retrieve more than 24 results per page is to change the
+        `Thumbs Per Page` option in your browsing settings and providing an API key
+        whenever performing a search.
+        """
+        url = API_ENDPOINTS["search"]
+
+        # If `self.params` is empty, the search will use the default parameters.
+        data = handler.get_json(
+            url, timeout=self.timeout, headers=self.headers, params=self.params
+        )
+        return SearchResults.from_dict(data)
