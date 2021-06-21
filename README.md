@@ -15,7 +15,7 @@ A Python library and CLI for interacting with the Wallhaven API.
 **Note**: There is still no pagination/filtering available for **Collection Listing** and **Searching**.
 
 ### Planned Features
-Features that are planned to arrive in future releases of `Wallhaven`. These features are all related to the API; the development of the CLI will start when most of these have been implemented.
+Features that are planned to arrive in future releases of `Wallhaven`.
 
 - **Improved Searching**
   - Add a way for users to interact with the search parameters. This should make it a lot easier to customize the parameters to fit your preferences. 
@@ -25,11 +25,10 @@ Features that are planned to arrive in future releases of `Wallhaven`. These fea
 - **Wait on Request Limit**
   - Figure out a way to know when the user hit the 45 requests per minute limit and wait until more requests can be made.
 - **Improved Models**
-  - base models for shared functionalities.
+  - Better base models for shared functionalities.
   - More utility to currently existing models.
 - **Parallelism**
   - Allow users to download 2-4 wallpapers at once.
-  - Multi-threaded requests. This will improve performance when paginating through listings. Combined with the `Wait on Request Limit` feature, there shouldn't be any problems with limits.
 
 For more information and details about the planned features, check the [TODO.md]() file.
 
