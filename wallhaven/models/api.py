@@ -163,32 +163,43 @@ class Wallpaper(WallhavenModel):
         # Return an instance of Wallpaper with default tags and uploader.
         return cls(**data)
 
-    def save(self, path: Union[Path, str]) -> None:
+    def save(self, path: Union[Path, str], override: bool = False) -> None:
         """Download wallpaper and save it in `path`.
 
         The directory will be automatically created if it doesn't exist and the file
-        format is `wallhaven-{id}{extension}`, e.g `wallhaven-8oxreo.png`.
+        format is `wallhaven-{id}{extension}`, e.g., `wallhaven-8oxreo.png`.
+
+        Users may choose whether to override existing files or simply skip the download.
 
         Args:
             path (Path | str): The directory where the wallpaper will be saved.
+            override (bool): Whether to override existing files.
 
         Raises:
             TypeError: If `path` is not a `str` or a `Path` object.
         """
+        # Since we will always be using `Path` objects, we first need to instantiate an
+        # object from a string.
         if not isinstance(path, Path):
             path = Path(path)
 
+        # Create directory and parent folders.
         if not path.exists():
-            path.mkdir()
+            path.mkdir(parents=True)
 
+        # Get the file name, i.e., wallhaven-8oxreo.png.
         filename = f"wallhaven-{self.id}{self.extension}"
+
+        # Get the file path, i.e., /home/user/Pictures/wallhaven-8oxreo.png
         filepath = path.joinpath(filename)
 
-        response = handler.get(self.path, stream=True, timeout=20)
-        with open(filepath, "wb+") as img_file:
-            for chunk in response.iter_content(chunk_size=1024):
-                if chunk:
-                    img_file.write(chunk)
+        # Only downloads if the file doesn't exist or if `override` if set to True.
+        if not filepath.exists() or override:
+            response = handler.get(self.path, stream=True, timeout=20)
+            with open(filepath, "wb+") as img_file:
+                for chunk in response.iter_content(chunk_size=1024):
+                    if chunk:
+                        img_file.write(chunk)
 
 
 @dataclass
