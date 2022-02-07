@@ -1,8 +1,7 @@
-"""Provides Wallhaven to interact with the Wallhaven API."""
 import os
 from typing import Any, Dict, List, Optional, Union
 
-from wallhaven.api import API_ENDPOINTS
+from wallhaven.endpoints import ENDPOINTS
 from wallhaven.exceptions import ApiKeyError
 from wallhaven.models import (
     Collection,
@@ -15,29 +14,26 @@ from wallhaven.models import (
 from wallhaven.session import handler
 
 
-class Wallhaven:
-    """A wrapper around the Wallhaven API.
+class API:
+    """Interface for the Wallhaven API v1.
 
-    Basic Usage:
-        >>> wallhaven = Wallhaven()
-        >>> wallpaper = wallhaven.get_wallpaper(wallpaper_id="8oxreo")
-        <Wallpaper(id='8oxreo', ...)>
+    Args:
+        api_key: The API key is used to grant access to additional operations. To get one, log in to
+        ``Wallhaven`` and go to your account settings.
+
+    Attributes:
+        timeout: How much time (in seconds) to wait for the server's response. A value of ``None``
+            means waiting indefinitely.
+        params: The parameters used when searching for wallpapers.
+
+
+    Examples:
+        >>> import wallhaven
+        >>> api = wallhaven.API()
+        >>> api.get...
     """
 
-    def __init__(
-        self, api_key: Optional[str] = None, timeout: Optional[int] = 30
-    ) -> None:
-        """Initialize a Wallhaven instance.
-
-        Args:
-            api_key (str): A key that grants users unrestricted access to the API.
-                This key is provided via the user's account settings and can be
-                regenerated at anytime by the user. If no API key is given, `Wallhaven`
-                will try to load one from the `WALLHAVEN_API_KEY` environment variable.
-            timeout (int | None): The limit of time (in seconds) that `Wallhaven` will
-                wait for the server's response. The value of `None` means that
-                `Wallhaven` will wait forever.
-        """
+    def __init__(self, api_key: Optional[str] = None, timeout: Optional[int] = 30) -> None:
         self.api_key = api_key or os.getenv("WALLHAVEN_API_KEY")
 
         # The parameters used when searching for wallpapers.
@@ -53,9 +49,9 @@ class Wallhaven:
         # Users can authenticate by including their API key either in a request URL by
         # appending ?apikey=<API KEY>, or by including the X-API-Key: <API KEY> header
         # with the request. We will use the latter.
-        self.headers: Dict[str, str] = {}
+        self._headers: Dict[str, str] = {}
         if self.api_key is not None:
-            self.headers["X-API-Key"] = self.api_key
+            self._headers["X-API-Key"] = self.api_key
 
     @staticmethod
     def _get_collections_from_response(response: Dict[str, list]) -> List[Collection]:
@@ -102,12 +98,10 @@ class Wallhaven:
             information that can be used as pagination.
         """
         # Same endpoint for both public and private collection listing.
-        url = API_ENDPOINTS["collection_listing"].format(
-            username=username, id=collection_id
-        )
+        url = ENDPOINTS["collection_listing"].format(username=username, id=collection_id)
 
         if private:
-            response = handler.get_json(url, timeout=self.timeout, headers=self.headers)
+            response = handler.get_json(url, timeout=self.timeout, headers=self._headers)
         else:
             response = handler.get_json(url, timeout=self.timeout)
 
@@ -129,8 +123,8 @@ class Wallhaven:
         Returns:
             An instance of a `Wallpaper` object.
         """
-        url = API_ENDPOINTS["wallpaper"].format(id=wallpaper_id)
-        response = handler.get_json(url, timeout=self.timeout, headers=self.headers)
+        url = ENDPOINTS["wallpaper"].format(id=wallpaper_id)
+        response = handler.get_json(url, timeout=self.timeout, headers=self._headers)
         return Wallpaper.from_dict(response["data"])
 
     def get_tag(self, tag_id: Union[str, int]) -> Tag:
@@ -142,7 +136,7 @@ class Wallhaven:
         Returns:
             An instance of a `Tag` object.
         """
-        url = API_ENDPOINTS["tag"].format(id=tag_id)
+        url = ENDPOINTS["tag"].format(id=tag_id)
         response = handler.get_json(url, timeout=self.timeout)
         return Tag.from_dict(response["data"])
 
@@ -158,11 +152,11 @@ class Wallhaven:
         if self.api_key is None:
             raise ApiKeyError("An API key is required to read an user's settings.")
 
-        url = API_ENDPOINTS["settings"]
-        response = handler.get_json(url, timeout=self.timeout, headers=self.headers)
+        url = ENDPOINTS["settings"]
+        response = handler.get_json(url, timeout=self.timeout, headers=self._headers)
         return UserSettings.from_dict(response["data"])
 
-    def get_collections(self, username: str) -> List[Collection]:
+    def get_collections_from_username(self, username: str) -> List[Collection]:
         """Get the collections of a given user.
 
         Fetching the collections by username only returns public collections.
@@ -178,11 +172,11 @@ class Wallhaven:
             private. In this case, use `get_all_collections` with an API key.
 
         """
-        url = API_ENDPOINTS["collection"].format(username=username)
+        url = ENDPOINTS["collection"].format(username=username)
         response = handler.get_json(url, timeout=self.timeout)
         return self._get_collections_from_response(response)
 
-    def get_all_collections(self) -> List[Collection]:
+    def get_collections_from_apikey(self) -> List[Collection]:
         """Get all collections (including private ones) from an authenticated user.
 
         This operation requires an API key.
@@ -198,13 +192,11 @@ class Wallhaven:
             raise ApiKeyError(
                 "An API key is required to get collections from an authenticated user."
             )
-        url = API_ENDPOINTS["collection_apikey"]
-        response = handler.get_json(url, timeout=self.timeout, headers=self.headers)
+        url = ENDPOINTS["collection_apikey"]
+        response = handler.get_json(url, timeout=self.timeout, headers=self._headers)
         return self._get_collections_from_response(response)
 
-    def get_collection_listing(
-        self, username: str, collection_id: int
-    ) -> CollectionListing:
+    def get_collection_listing(self, username: str, collection_id: int) -> CollectionListing:
         """Get the listing of wallpapers from a public collection.
 
         Args:
@@ -262,10 +254,10 @@ class Wallhaven:
         `Thumbs Per Page` option in your browsing settings and providing an API key
         whenever performing a search.
         """
-        url = API_ENDPOINTS["search"]
+        url = ENDPOINTS["search"]
 
         # If `self.params` is empty, the search will use the default parameters.
         data = handler.get_json(
-            url, timeout=self.timeout, headers=self.headers, params=self.params
+            url, timeout=self.timeout, headers=self._headers, params=self.params
         )
         return SearchResults.from_dict(data)
