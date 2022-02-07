@@ -25,7 +25,23 @@ isort = "*"
 flake8-docstrings = "^1.6.0"
 
 [tool.black]
-line-length = 88
+line-length = 100
+
+[tool.isort]
+profile = "black"
+line_length = 100
+skip_gitignore = true
+
+# https://blog.wolt.com/engineering/2021/09/30/professional-grade-mypy-configuration/
+# TLDR: Strict by default and loose when needed
+[tool.mypy]
+disallow_untyped_defs = true
+disallow_any_unimported = true
+no_implicit_optional = true
+check_untyped_defs = true
+warn_return_any = true
+warn_unused_ignores = true
+show_error_codes = true
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
