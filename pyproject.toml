@@ -24,6 +24,9 @@ mypy = "^0.931"
 isort = "^5.10.1"
 flake8-docstrings = "^1.6.0"
 
+[tool.poetry.scripts]
+wallhaven = "wallhaven.cli.main:cli"
+
 [tool.black]
 line-length = 100
 
