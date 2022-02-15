@@ -5,22 +5,23 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+import httpx
 from typing_extensions import Literal
 
-from wallhaven.session import handler
+from wallhaven.session import RequestHandler
 
 
 class WallhavenModel:
     """Base model class with methods that other models will inherit."""
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         self._data: Dict[str, Any] = {}
 
     def as_dict(self) -> Dict[str, Any]:
         """Return the instance as a dictionary."""
         return self._data
 
-    def as_json(self, **kwargs) -> str:
+    def as_json(self, **kwargs: Any) -> str:
         """Return the instance as a JSON string.
 
         Args:
@@ -39,8 +40,15 @@ class WallhavenModel:
         cls._data = data.copy()
         return cls(**data)
 
+    @classmethod
+    def from_response(cls, response: httpx.Response):
+        """Return an instance of ``cls`` from a response object."""
+        data: dict = response.json()["data"]
 
-@dataclass(frozen=True)
+        return cls.from_dict(data)
+
+
+@dataclass
 class Wallpaper(WallhavenModel):
     """Represents a Wallpaper.
 
@@ -68,6 +76,8 @@ class Wallpaper(WallhavenModel):
         thumbs (dict): A mapping of `{'thumb_size': 'thumb_url'}`
 
     """
+
+    _session: RequestHandler = field(init=False, repr=False)
 
     id: str
     url: str
@@ -112,18 +122,27 @@ class Wallpaper(WallhavenModel):
         """Return the file size as a human friendly KB, MB, GB, TB or PB string."""
         base = 1000
         scales = [
-            (base ** 5, "PB"),
-            (base ** 4, "TB"),
-            (base ** 3, "GB"),
-            (base ** 2, "MB"),
-            (base ** 1, "kB"),
-            (base ** 0, "B"),
+            (base**5, "PB"),
+            (base**4, "TB"),
+            (base**3, "GB"),
+            (base**2, "MB"),
+            (base**1, "kB"),
+            (base**0, "B"),
         ]
 
         for scale in scales:
             if self.file_size >= scale[0]:
                 break
         return "%.2f%s" % (self.file_size / scale[0], scale[1])
+
+    @property
+    def filename(self) -> str:
+        """Return a string representing the filename of the wallpaper."""
+        return f"wallhaven-{self.id}{self.extension}"
+
+    def _set_session(self, session: RequestHandler) -> None:
+        """Set the session."""
+        self._session = session
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> Wallpaper:
@@ -163,6 +182,13 @@ class Wallpaper(WallhavenModel):
         # Return an instance of Wallpaper with default tags and uploader.
         return cls(**data)
 
+    def _download(self, path: Path) -> None:
+        response = self._session.get(self.path, stream=True)
+        with open(path, "wb+") as file:
+            for chunk in response.iter_bytes():
+                if chunk:
+                    file.write(chunk)
+
     def save(self, path: Union[Path, str], override: bool = False) -> None:
         """Download wallpaper and save it in `path`.
 
@@ -178,28 +204,16 @@ class Wallpaper(WallhavenModel):
         Raises:
             TypeError: If `path` is not a `str` or a `Path` object.
         """
-        # Since we will always be using `Path` objects, we first need to instantiate an
-        # object from a string.
-        if not isinstance(path, Path):
-            path = Path(path)
+        # Ensure we always used path objects.
+        path = Path(path)
 
-        # Create directory and parent folders.
-        if not path.exists():
-            path.mkdir(parents=True)
+        path.mkdir(parents=True, exist_ok=True)
 
-        # Get the file name, i.e., wallhaven-8oxreo.png.
-        filename = f"wallhaven-{self.id}{self.extension}"
+        # Get the file path; /home/user/Pictures/wallhaven-8oxreo.png
+        filepath = path.joinpath(self.filename)
 
-        # Get the file path, i.e., /home/user/Pictures/wallhaven-8oxreo.png
-        filepath = path.joinpath(filename)
-
-        # Only downloads if the file doesn't exist or if `override` if set to True.
         if not filepath.exists() or override:
-            response = handler.get(self.path, stream=True, timeout=20)
-            with open(filepath, "wb+") as img_file:
-                for chunk in response.iter_content(chunk_size=1024):
-                    if chunk:
-                        img_file.write(chunk)
+            self._download(filepath)
 
 
 @dataclass
@@ -348,7 +362,7 @@ class CollectionListing(BaseListing):
     pass
 
 
-@dataclass(frozen=True)
+@dataclass
 class Meta(WallhavenModel):
     """Represents the Meta field in the API response.
 
