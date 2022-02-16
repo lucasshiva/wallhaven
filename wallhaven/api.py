@@ -1,7 +1,7 @@
 from os import getenv
 from typing import List, Optional, Union
 
-from wallhaven.models.api import (
+from wallhaven.models import (
     Collection,
     CollectionListing,
     SearchResults,
