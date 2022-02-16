@@ -13,6 +13,7 @@ class RequestHandler:
     """
 
     BASE_URL = "https://wallhaven.cc/api/v1"
+    USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0"
 
     def __init__(self, api_key: Optional[str] = None, timeout: int = 10):
         self.api_key = api_key
@@ -20,6 +21,7 @@ class RequestHandler:
 
         self.client = httpx.Client(base_url=self.BASE_URL, timeout=self.timeout)
         self.client.event_hooks["response"] = [self._check_for_errors]
+        self.client.headers["User-Agent"] = self.USER_AGENT
         if self.api_key:
             self.client.headers["X-API-KEY"] = self.api_key
 
@@ -34,7 +36,7 @@ class RequestHandler:
             else:
                 raise UnauthorizedError(f"API key not found. Unable to request {response.url}")
         elif sc == 429:
-            raise TooManyRequests("The request limit of 45 requests/min has been exceeded.")
+            raise TooManyRequests("The request limit has been exceeded.")
 
         # Check for other 4xx or 5xx errors.
         response.raise_for_status()
