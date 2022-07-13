@@ -1,7 +1,8 @@
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 
+from wallhaven.config import APISettings
 from wallhaven.errors import NotFoundError, TooManyRequestsError, UnauthorizedError
 
 
@@ -22,18 +23,18 @@ class APIClient:
 
     API_URL = "https://wallhaven.cc/api/v1"
 
-    def __init__(
-        self, api_key: Optional[str] = None, *, timeout: int = 20, retries: int = 1
-    ) -> None:
-        self.api_key = api_key
-        self.timeout = timeout
-        self.retries = retries
+    def __init__(self, settings: APISettings) -> None:
+        self.api_settings = settings
 
-        transport = httpx.HTTPTransport(retries=self.retries)
-        self.client = httpx.Client(base_url=self.API_URL, timeout=self.timeout, transport=transport)
+        transport = httpx.HTTPTransport(retries=self.api_settings.retries)
+        self.client = httpx.Client(
+            base_url=self.API_URL,
+            timeout=self.api_settings.timeout,
+            transport=transport,
+        )
         self.client.event_hooks["response"] = [self._check_for_errors]
-        if self.api_key:
-            self.client.headers["X-API-KEY"] = self.api_key
+        if self.api_settings.api_key:
+            self.client.headers["X-API-Key"] = self.api_settings.api_key
 
     def _check_for_errors(self, response: httpx.Response) -> None:
         """Check for HTTP errors in a ``httpx.Response`` object."""
@@ -66,9 +67,8 @@ class APIClient:
         request = self.client.build_request("GET", endpoint, **kwargs)
 
         # Avoid sending a request we know it's invalid.
-        if auth and not request.headers.get("X-API-KEY"):
+        if auth and request.headers.get("X-API-Key") is None:
             raise UnauthorizedError(f"You need an API key to request: {request.url}")
-
         return request
 
     def get(

@@ -1,63 +1,104 @@
-import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from wallhaven.client import APIClient
-from wallhaven.models import Wallpaper
+from wallhaven.config import APISettings
+from wallhaven.models import Listing, Wallpaper
+from wallhaven.search import SearchParameters
 
 
 class Wallhaven:
     """Interface for the Wallhaven API v1.
 
     Examples:
+
+        A simple example:
+
         >>> from wallhaven import Wallhaven
-        >>> api = Wallhaven(api_key=<api_key>)
+        >>> api = Wallhaven()
         >>> api.get_wallpaper(<id>)
-        <Wallpaper(id=...)>
+        <Wallpaper ...>
+
+        Change default API settings:
+
+        >>> from wallhaven import Wallhaven
+        >>> from wallhaven.config import APISettings
+        >>> settings = APISettings(timeout=10)  # Changing default config.
+        >>> api = Wallhaven(settings=settings)
+        >>> api.get_wallpaper(<id>)
+        <Wallpaper ...>
+
+        Set the search parameters.
+        >>> from wallhaven import Wallhaven
+        >>> from wallhaven.search import Sorting, ToplistRange
+        >>> api = Wallhaven()
+        >>> api.params.categories.set(general=True, anime=True, people=False)  # Disable people
+        >>> api.params.sorting = Sorting.Toplist
+        >>> api.params.topRange = ToplistRange.LastWeek
+        >>> api.search()
+        <Listing ...>
     """
 
     def __init__(
-        self, api_key: Optional[str] = None, *, timeout: int = 20, retries: int = 1
+        self,
+        *,
+        settings: APISettings = APISettings(),
+        params: SearchParameters = SearchParameters(),
     ) -> None:
-        """Initialize a ``Wallhaven`` instance.
+        """Initializes a ``Wallhaven`` instance.
 
         Args:
-            api_key: The API key is used for operations that require the user to be authenticated
-                (such as viewing your browsing settings), and for NSFW wallpapers. If none is given,
-                `Wallhaven` will try to read one from the 'WALLHAVEN_API_KEY' environment variable.
-            timeout: The amount of seconds to wait for the server's response before giving up.
-            retries: The amount of retries to perform when requesting the API.
+            settings: The settings for the API.
+            params: The parameters used when searching for wallpapers.
         """
-        self.api_key = api_key or os.environ.get("WALLHAVEN_API_KEY")
-        self.timeout = timeout
-        self.retries = retries
+        self.settings = settings
 
-        # TODO: Find a way to share this client between this class and the models.
-        # I want to be able to reuse the connection in every request the user makes.
-        # So far, the only way I can get this working is by passing the client to the models, but
-        # I don't think that it the ideal solution.
-        self.client = APIClient(api_key, timeout=self.timeout, retries=self.retries)
+        if not isinstance(params, SearchParameters):
+            params = SearchParameters.parse_obj(params)
+        self.params = params
 
-    def _get(self, endpoint: str, *, pass_client: bool = False) -> Dict[str, Any]:
+        self.client = APIClient(settings=self.settings)
+
+    def _get(
+        self,
+        endpoint: str,
+        *,
+        pass_client: bool = False,
+        auth: bool = False,
+        use_params: bool = False,
+    ) -> Dict[str, Any]:
         """Send a GET request to the endpoint.
 
         Args:
-            endpoint: The url to request.
-            client: Whether to add ``self.client`` to the JSON response.
+            endpoint:
+                The endpoint to request.
+            client:
+                Whether to add `self.client` to the JSON response. This is necessary for wallpapers
+                and listings.
+            auth:
+                If an API key must be present for the operation to succeed.
+            use_params:
+                Whether to pass `self.params` to the request. This will also add them to metadata
+                when requesting for listings.
 
         Returns:
             The response in JSON format.
         """
-        response: Dict[str, Any] = self.client.get(endpoint).json()
+        params = self.params.as_dict() if use_params else None
+        response = self.client.get(endpoint, auth=auth, params=params)
+        data: Dict[str, Any] = response.json()
 
         # If we only have the `data` key, add the client inside it.
-        if len(response.keys()) == 1 and pass_client:
-            response["data"]["client"] = self.client
+        if pass_client and len(data) == 1:
+            data["data"]["client"] = self.client
 
-        # Otherwise, add it as another key.
-        else:
-            response["client"] = self.client
+        # Otherwise, if it's a listing, add it as another key.
+        # We also need to add the request url and the request params for pagination.
+        elif pass_client:
+            data["client"] = self.client
+            data["meta"]["request_url"] = str(response.url)
+            data["meta"]["params"] = self.params
 
-        return response
+        return data
 
     def get_wallpaper(self, id: str) -> Wallpaper:
         """Get wallpaper from ID.
@@ -81,3 +122,25 @@ class Wallhaven:
         """
         data = self._get(f"/w/{id}", pass_client=True)["data"]
         return Wallpaper.parse_obj(data)
+
+    def search(self, params_only: bool = False) -> Listing:
+        """Searches for wallpapers.
+
+        If an API key is present, the search parameters will be a mix between the user's browsing
+        settings and the parameters defined in `Wallhaven.params`.
+
+        Args:
+            params_only:
+                Don't use the parameters from the API key when searching, even if an API key is
+                present. Searching for NSFW is not possible without an API key.
+
+        Returns:
+            An instance of `Listing` that can be used to access the wallpapers and the metadata from
+            the search results.
+        """
+        if params_only:
+            data = self._get("/search", pass_client=True, use_params=True)
+        else:
+            data = self._get("/search", pass_client=True, auth=True, use_params=True)
+
+        return Listing.parse_obj(data)

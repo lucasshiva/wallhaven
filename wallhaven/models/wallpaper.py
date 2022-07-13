@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, PrivateAttr
 from typing_extensions import Literal
 
 from wallhaven.client import APIClient
@@ -119,7 +119,7 @@ class Wallpaper(PureWallpaper):
         thumbs (dict): A mapping of `{'thumb_size': 'thumb_url'}`
     """
 
-    _client: APIClient = Field(alias="client")
+    _client: APIClient = PrivateAttr(default=None)  # This is NOT an optional attribute.
 
     class Config:
         arbitrary_types_allowed = True
