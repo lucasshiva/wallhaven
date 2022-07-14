@@ -15,31 +15,30 @@ location by using the `-p` option followed by a path.
 @click.argument("id", type=str)
 @click.option("--json", help="Print wallpaper's metadata to sdtout in JSON format.", is_flag=True)
 @click.option(
-    "--no-save",
+    "--nosave",
     is_flag=True,
-    help="Does not save the wallpaper. This is useful if you're only interested in the metadata.",
+    help="Does not save the wallpaper. This is useful if you're only interested in the JSON.",
 )
 @click.option(
     "-o",
     "--override",
     is_flag=True,
-    help="Whether to override existing files when saving the wallpaper. Default: False",
+    help=f"Whether to override existing files. Current: {config.download.override}",
 )
 @click.option(
     "-p",
     "--path",
-    type=click.Path(writable=True, file_okay=False),
-    help="A custom path in which to save the wallpaper.",
+    type=click.Path(writable=True, file_okay=False, resolve_path=True),
+    help=f"Save the wallpaper in this path. Current: {config.download.path.absolute()}",
+    default=config.download.path.absolute(),
 )
 @click.pass_obj
-def wallpaper(
-    api: Wallhaven, id: str, json: bool, no_save: bool, override: bool, path: str
-) -> None:
+def wallpaper(api: Wallhaven, id: str, json: bool, nosave: bool, override: bool, path: str) -> None:
     w = api.get_wallpaper(id)
 
     if json:
         click.echo(w.json(indent=2))
 
-    if not no_save:
-        save_directory = config.download.path or path or "."
-        w.download(save_directory, override=override)
+    if not nosave:
+        w.download(path, override=override)
+        click.echo(f"Saved {w.filename} in '{path}'")

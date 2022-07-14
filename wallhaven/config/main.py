@@ -1,31 +1,12 @@
 import json
 from pathlib import Path
-from typing import Any, ClassVar, Dict, Optional
+from typing import Any, ClassVar, Dict
 
 import click
-from pydantic import BaseModel, BaseSettings, Field
 
 from wallhaven.search import SearchParameters
-
-
-class APISettings(BaseSettings):
-    """Settings for the API.
-
-    Attributes:
-        api_key: The API key is used for operations that require the user to be authenticated
-            (such as viewing your browsing settings), and for NSFW wallpapers. If none is given,
-            `Wallhaven` will try to read one from the 'WALLHAVEN_API_KEY' environment variable.
-        timeout: The amount of seconds to wait for the server's response before giving up.
-        retries: The amount of retries to perform when requesting the API.
-    """
-
-    api_key: Optional[str] = Field(default=None, env="WALLHAVEN_API_KEY")
-    timeout: int = 20
-    retries: int = 1
-
-
-class DownloadSettings(BaseModel):
-    path: Optional[str] = None
+from wallhaven.config import APISettings, DownloadSettings
+from wallhaven.models import BaseModel
 
 
 class Config(BaseModel):
@@ -73,20 +54,17 @@ class Config(BaseModel):
         data = {}
 
         for field, value in self.__fields__.items():
-            if field == "search":
-                data[field] = value.get_default().as_dict()  # Call `SearchParameters.as_dict()`
+            obj = value.get_default()
+            if hasattr(obj, "as_dict"):
+                data[field] = obj.as_dict()
             else:
-                data[field] = value.get_default().dict()
+                data[field] = obj.dict()
 
         return data
 
     def _write_data(self, data: Dict[str, Any]) -> None:
         """Write data into the configuration file."""
-        try:
-            self.PATH.write_text(json.dumps(data, indent=2))
-        except TypeError as e:
-            print(f"Error writing data to config file: {e}")
-            exit()
+        self.PATH.write_text(json.dumps(data, indent=2))
 
     def write_default_config(self) -> None:
         """Create the configuration file and write the default settings to it."""

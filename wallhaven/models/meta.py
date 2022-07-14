@@ -1,7 +1,6 @@
 from typing import Optional, Union
 
-from pydantic import BaseModel
-
+from wallhaven.models import BaseModel
 from wallhaven.search import SearchParameters
 
 
@@ -12,15 +11,27 @@ class Meta(BaseModel):
     collection or when searching for wallpapers.
 
     Attributes:
-        current_page (int): The current page of the listing/search.
-        last_page (int): The last page of the listing/search.
-        per_page (int): The amount of wallpapers per page.
-        total (int): The total amount of wallpapers in a collection/search result.
-        query (str | dict): The search query. It can be a string or, when searching
-            for exact tags, it will be a dictionary with the tag id and name.
-        seed (str): A seed that can be passed between pages to ensure there are no
-            repeats when sorting by `random`.
-        request_url (str): An optional string stating the request URL.
+        current_page:
+            The current page of the listing/search.
+        last_page:
+            The last page of the listing/search.
+        per_page:
+            The amount of wallpapers per page.
+        total:
+            The total amount of wallpapers in a collection/search result.
+        request_url:
+            An optional string stating the request URL.
+        params:
+            The parameters used in the request. When using `Meta.dict()`, `params` will be equal to
+            a dictionary of query parameters ignoring any default parameters.
+        api_key:
+            If an API key was present when the request was made.
+        query:
+            The search query. It can be a string or, when searching for exact tags, it will be a
+            dictionary with the tag id and name.
+        seed:
+            A seed that can be passed between pages to ensure there are no repeats when sorting by
+            `random`.
     """
 
     current_page: int
@@ -30,10 +41,12 @@ class Meta(BaseModel):
     per_page: int
     total: int
 
-    # A custom field that will be used for pagination.
+    # Custom fields.
     # The URL will look like this: https://wallhaven.cc/api/v1/collections/USERNAME/ID
-    # For pagination, we simply need to append "?page=<page_number>".
+    # For pagination, we simply need to append "?page=<page_number>". This will be done by modifying
+    # `params.page` and performing another request from a `Listing` model.
     request_url: str
+    api_key: bool
     params: SearchParameters
 
     # Query and Seed are only available when searching. The search query is usually a

@@ -1,7 +1,7 @@
 import click
 
 from wallhaven import Wallhaven
-from wallhaven.cli.commands import ConfigCommand, WallpaperCommand
+from wallhaven.cli.commands import ConfigCommand, WallpaperCommand, SearchCommand
 from wallhaven.config import wallhaven_config
 
 
@@ -13,6 +13,7 @@ def cli(ctx: click.Context) -> None:
 
 cli.add_command(WallpaperCommand)
 cli.add_command(ConfigCommand)
+cli.add_command(SearchCommand)
 
 if __name__ == "__main__":
     cli()

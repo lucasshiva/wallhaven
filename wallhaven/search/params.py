@@ -1,7 +1,8 @@
 from typing import Any, Dict
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
+from wallhaven.models import BaseModel
 from wallhaven.search import Categories, ColorManager, Purity, Query
 from wallhaven.search.enums import Sorting, SortingOrder, ToplistRange
 
@@ -15,7 +16,12 @@ class SearchParameters(BaseModel):
     toplist_range: ToplistRange = Field(default=ToplistRange.LastMonth, alias="topRange")
     colors: ColorManager = ColorManager()
 
-    def as_dict(self, skip_defaults: bool = False, skip_empty: bool = True) -> dict:
+    # TODO: Maybe just use this instead of `as_dict()`.
+    def dict(self, *args, **kwargs) -> Dict[str, Any]:  # type: ignore
+        # This is to format the params when calling `.dict()` from `Meta`.
+        return self.as_dict(skip_defaults=True)
+
+    def as_dict(self, skip_defaults: bool = False, skip_empty: bool = True) -> Dict[str, Any]:
         """Returns the instance as a dictionary.
 
         Args:
@@ -56,19 +62,31 @@ class SearchParameters(BaseModel):
 
         return params
 
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "SearchParameters":
-        """Creates an instance of ``SearchParameters`` from data."""
-        attrs = {}
-        for field, value in cls.__fields__.items():
-            # We use the alias when possible
+    def _get_attrs_from_dict(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        if not isinstance(data, dict):
+            raise ValueError(f"Cannot create `SearchParameters` from a {type(data)}")
+
+        attrs: Dict[str, Any] = {}
+        for field, value in self.__fields__.items():
+            # We use the alias whenever possible
             name = value.alias if value.has_alias else field
 
             if name not in [k.lower() for k in data]:
                 continue
-            attr = value.type_
 
             # We assume that every parameter has a `.create()` classmethod.
-            attrs[name] = attr.create(data[name])
+            attrs[name] = value.type_.create(data[name])
 
-        return cls(**attrs)
+        return attrs
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "SearchParameters":
+        """Creates an instance of ``SearchParameters`` from data."""
+        instance = cls()
+        instance.load_dict(data)
+        return instance
+
+    def load_dict(self, data: Dict[str, Any]) -> None:
+        """Load parameters from `data`."""
+        for attr, value in self._get_attrs_from_dict(data).items():
+            setattr(self, attr, value)

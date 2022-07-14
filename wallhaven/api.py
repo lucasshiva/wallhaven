@@ -1,9 +1,12 @@
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Union
 
-from wallhaven.client import APIClient
-from wallhaven.config import APISettings
 from wallhaven.models import Listing, Wallpaper
 from wallhaven.search import SearchParameters
+from wallhaven.config import APISettings
+from wallhaven.client import APIClient
+
+
+ParamTypes = Union[Dict[str, Any], SearchParameters]
 
 
 class Wallhaven:
@@ -53,7 +56,7 @@ class Wallhaven:
         self.settings = settings
 
         if not isinstance(params, SearchParameters):
-            params = SearchParameters.parse_obj(params)
+            params = SearchParameters.from_dict(params)
         self.params = params
 
         self.client = APIClient(settings=self.settings)
@@ -64,7 +67,7 @@ class Wallhaven:
         *,
         pass_client: bool = False,
         auth: bool = False,
-        use_params: bool = False,
+        params: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Send a GET request to the endpoint.
 
@@ -83,20 +86,16 @@ class Wallhaven:
         Returns:
             The response in JSON format.
         """
-        params = self.params.as_dict() if use_params else None
         response = self.client.get(endpoint, auth=auth, params=params)
         data: Dict[str, Any] = response.json()
 
-        # If we only have the `data` key, add the client inside it.
-        if pass_client and len(data) == 1:
-            data["data"]["client"] = self.client
-
-        # Otherwise, if it's a listing, add it as another key.
-        # We also need to add the request url and the request params for pagination.
-        elif pass_client:
-            data["client"] = self.client
+        # We need to add the request url and the request params for pagination.
+        if len(data) == 2:
             data["meta"]["request_url"] = str(response.url)
-            data["meta"]["params"] = self.params
+            data["meta"]["params"] = (
+                SearchParameters.from_dict(params) if params else SearchParameters()
+            )
+            data["meta"]["api_key"] = True if self.settings.api_key else False
 
         return data
 
@@ -120,27 +119,36 @@ class Wallhaven:
             >>> w = api.get_wallpaper("8oxreo")
             <Wallpaper(id="8oxreo", ...)>
         """
-        data = self._get(f"/w/{id}", pass_client=True)["data"]
-        return Wallpaper.parse_obj(data)
+        data: dict = self._get(f"/w/{id}", pass_client=True)["data"]
+        wallpaper = Wallpaper.parse_obj(data)
+        wallpaper._client = self.client
+        return wallpaper
 
-    def search(self, params_only: bool = False) -> Listing:
+    def search(self, *, default: bool = False) -> Listing:
         """Searches for wallpapers.
 
-        If an API key is present, the search parameters will be a mix between the user's browsing
-        settings and the parameters defined in `Wallhaven.params`.
+        If an API key is provided, searches will be performed using the user's browsing settings
+        and default filters.
+
+        With no additional parameters the search will display the latest SFW wallpapers.
+
+        Any additional parameters will override existing parameters.
 
         Args:
-            params_only:
-                Don't use the parameters from the API key when searching, even if an API key is
-                present. Searching for NSFW is not possible without an API key.
+            default:
+                Perform the search using only the default parameters, even if an API key is present.
 
         Returns:
             An instance of `Listing` that can be used to access the wallpapers and the metadata from
             the search results.
         """
-        if params_only:
-            data = self._get("/search", pass_client=True, use_params=True)
+        if default:
+            params = SearchParameters().as_dict()
         else:
-            data = self._get("/search", pass_client=True, auth=True, use_params=True)
+            params = self.params.as_dict(skip_defaults=True)
 
-        return Listing.parse_obj(data)
+        # We can't use `auth=True` in here since we don't know if the API key is required or not.
+        data = self._get("/search", pass_client=True, params=params)
+        listing = Listing.parse_obj(data)
+        listing._client = self.client
+        return listing

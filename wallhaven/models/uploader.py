@@ -1,6 +1,6 @@
 from typing import Dict
 
-from pydantic import BaseModel
+from wallhaven.models import BaseModel
 
 
 class Uploader(BaseModel):

@@ -2,8 +2,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Dict, List, Type, TypeVar, Union
 
-from pydantic import BaseModel
-
+from wallhaven.models import BaseModel
 from wallhaven import utils
 
 T_PARAM = TypeVar("T_PARAM", bound="BaseParameter")

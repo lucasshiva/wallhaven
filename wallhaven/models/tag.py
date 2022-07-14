@@ -1,5 +1,6 @@
-from pydantic import BaseModel
 from typing_extensions import Literal
+
+from wallhaven.models import BaseModel
 
 
 class Tag(BaseModel):

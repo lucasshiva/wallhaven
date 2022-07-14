@@ -1,2 +1,2 @@
 # flake8: noqa
-from wallhaven.api import Wallhaven
+from .api import Wallhaven

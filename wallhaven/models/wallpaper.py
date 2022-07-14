@@ -1,11 +1,11 @@
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, PrivateAttr
 from typing_extensions import Literal
+from pydantic import PrivateAttr
 
 from wallhaven.client import APIClient
-from wallhaven.models import Tag, Uploader
+from wallhaven.models import BaseModel, Tag, Uploader
 
 
 class PureWallpaper(BaseModel):
@@ -119,10 +119,7 @@ class Wallpaper(PureWallpaper):
         thumbs (dict): A mapping of `{'thumb_size': 'thumb_url'}`
     """
 
-    _client: APIClient = PrivateAttr(default=None)  # This is NOT an optional attribute.
-
-    class Config:
-        arbitrary_types_allowed = True
+    _client: APIClient = PrivateAttr(default_factory=APIClient)
 
     @property
     def filename(self) -> str:

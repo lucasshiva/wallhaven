@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 import httpx
 
@@ -23,8 +23,11 @@ class APIClient:
 
     API_URL = "https://wallhaven.cc/api/v1"
 
-    def __init__(self, settings: APISettings) -> None:
-        self.api_settings = settings
+    def __init__(self, settings: Optional[APISettings] = None) -> None:
+        if settings is None:
+            self.api_settings = APISettings()
+        else:
+            self.api_settings = settings
 
         transport = httpx.HTTPTransport(retries=self.api_settings.retries)
         self.client = httpx.Client(
@@ -79,7 +82,7 @@ class APIClient:
         Args:
             endpoint: The address to request. It can be both a full url (https://...) or an
                 endpoint (/tag/...)
-            auth: If an API key is required for this operation.
+            auth: If we are certain an API key is required for this operation.
             stream: Whether to avoid loading the entire response body into memory at once.
             **kwargs: Additional keyword arguments that ``httpx.Client.build_request`` takes.
         """

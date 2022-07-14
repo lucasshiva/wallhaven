@@ -1,13 +1,13 @@
 from typing import List
 
-from pydantic import BaseModel, PrivateAttr
+from pydantic import PrivateAttr
 
 from wallhaven.client import APIClient
-from wallhaven.models import Meta, Wallpaper
+from wallhaven.models import BaseModel, Meta, Wallpaper
 
 
 class Listing(BaseModel):
-    """The main listing class.
+    """Represents a listing.
 
     Attributes:
         data:
@@ -18,7 +18,4 @@ class Listing(BaseModel):
 
     data: List[Wallpaper]
     meta: Meta
-    _client: APIClient = PrivateAttr(default=None)  # This is NOT an optional attribute.
-
-    class Config:
-        arbitrary_types_allowed = True
+    _client: APIClient = PrivateAttr(default_factory=APIClient)
