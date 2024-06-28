@@ -1,3 +1,6 @@
+> [!WARNING]
+> This project is no longer maintained. If you wish to own this package in PyPI, feel free to contact me.
+
 # wallhaven
 A Python library and CLI for interacting with the Wallhaven API.
 
@@ -35,7 +38,7 @@ For more information and details about the planned features, check the [TODO.md]
 ## Installation
 **Note**: Before installing, make sure you have Python 3.7 or newer installed.<br><br>
 
-`wallhaven` is available as package in PyPI. You can install it using pip.
+`wallhaven` is available in [PyPI](https://pypi.org/project/wallhaven/). You can install it using pip:
 ```sh
 # Make sure you're using the latest version of pip.
 pip install --upgrade pip
